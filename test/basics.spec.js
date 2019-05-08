@@ -134,6 +134,40 @@ describe('MockAdapter basics', function() {
       });
   });
 
+  it('can pass URLSearchparams as query params for get to match to a handler', function() {
+    const params = new URLSearchParams();
+    params.append('foo', 'bar');
+    params.append('bar', 'foo');
+
+    const params2 = new URLSearchParams();
+    params2.append('bar', 'foo');
+    params2.append('foo', 'bar');
+
+    mock.onGet('/withParams', { params }).reply(200);
+
+    return instance
+      .get('/withParams', { params: params2, in: true })
+      .then(function(response) {
+        expect(response.status).to.equal(200);
+      });
+  });
+
+  it('can pass params as query params to match URLSearchparams for get to match to a handler', function() {
+    const params = new URLSearchParams();
+    params.append('foo', 'bar');
+    params.append('bar', 'foo');
+
+    mock
+      .onGet('/withParams', { params: { foo: 'bar', bar: 'foo' } })
+      .reply(200);
+
+    return instance
+      .get('/withParams', { params, in: true })
+      .then(function(response) {
+        expect(response.status).to.equal(200);
+      });
+  });
+
   it('can pass query params for delete to match to a handler', function() {
     mock
       .onDelete('/withParams', { params: { foo: 'bar', bar: 'foo' } })
@@ -196,24 +230,49 @@ describe('MockAdapter basics', function() {
     });
   });
 
-  it('does not match when parameters are wrong', function() {
+  it('does not match when parameters are wrong', function(done) {
     mock
       .onGet('/withParams', { params: { foo: 'bar', bar: 'foo' } })
       .reply(200);
-    return instance
+    instance
       .get('/withParams', { params: { foo: 'bar', bar: 'other' } })
+      .then(() => done(new Error('Did match')))
       .catch(function(error) {
         expect(error.response.status).to.equal(404);
+        done();
       });
   });
 
-  it('does not match when parameters are missing', function() {
+  it('does not match when URLSearchParams parameters are wrong', function(done) {
+    const params = new URLSearchParams();
+    params.append('foo', 'bar');
+    params.append('bar', 'foo');
+
+    const params2 = new URLSearchParams();
+    params2.append('foo', 'bar');
+    params2.append('bar', 'foosd');
+
+    mock.onGet('/withParams', { params }).reply(200);
+    instance
+      .get('/withParams', { params: params2 })
+      .then(() => done(new Error('Did match')))
+      .catch(function(error) {
+        expect(error.response.status).to.equal(404);
+        done();
+      });
+  });
+
+  it('does not match when parameters are missing', function(done) {
     mock
       .onGet('/withParams', { params: { foo: 'bar', bar: 'foo' } })
       .reply(200);
-    return instance.get('/withParams').catch(function(error) {
-      expect(error.response.status).to.equal(404);
-    });
+    instance
+      .get('/withParams')
+      .then(() => done(new Error('Did match')))
+      .catch(function(error) {
+        expect(error.response.status).to.equal(404);
+        done();
+      });
   });
 
   it('matches when parameters were not expected', function() {

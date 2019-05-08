@@ -26,12 +26,29 @@ function combineUrls(baseURL, url) {
   return url;
 }
 
-function findHandler(handlers, method, url, body, parameters, headers, baseURL) {
+function findHandler(
+  handlers,
+  method,
+  url,
+  body,
+  parameters,
+  headers,
+  baseURL
+) {
   return find(handlers[method.toLowerCase()], function(handler) {
     if (typeof handler[0] === 'string') {
-      return (isUrlMatching(url, handler[0]) || isUrlMatching(combineUrls(baseURL, url), handler[0])) && isBodyOrParametersMatching(method, body, parameters, handler[1])  && isRequestHeadersMatching(headers, handler[2]);
+      return (
+        (isUrlMatching(url, handler[0]) ||
+          isUrlMatching(combineUrls(baseURL, url), handler[0])) &&
+        isBodyOrParametersMatching(method, body, parameters, handler[1]) &&
+        isRequestHeadersMatching(headers, handler[2])
+      );
     } else if (handler[0] instanceof RegExp) {
-      return (handler[0].test(url) || handler[0].test(combineUrls(baseURL, url))) && isBodyOrParametersMatching(method, body, parameters, handler[1]) && isRequestHeadersMatching(headers, handler[2]);
+      return (
+        (handler[0].test(url) || handler[0].test(combineUrls(baseURL, url))) &&
+        isBodyOrParametersMatching(method, body, parameters, handler[1]) &&
+        isRequestHeadersMatching(headers, handler[2])
+      );
     }
   });
 }
@@ -39,7 +56,7 @@ function findHandler(handlers, method, url, body, parameters, headers, baseURL) 
 function isUrlMatching(url, required) {
   var noSlashUrl = url[0] === '/' ? url.substr(1) : url;
   var noSlashRequired = required[0] === '/' ? required.substr(1) : required;
-  return (noSlashUrl === noSlashRequired);
+  return noSlashUrl === noSlashRequired;
 }
 
 function isRequestHeadersMatching(requestHeaders, required) {
@@ -49,7 +66,7 @@ function isRequestHeadersMatching(requestHeaders, required) {
 
 function isBodyOrParametersMatching(method, body, parameters, required) {
   var allowedParamsMethods = ['delete', 'get', 'head', 'options'];
-  if (allowedParamsMethods.indexOf(method.toLowerCase()) >= 0 ) {
+  if (allowedParamsMethods.indexOf(method.toLowerCase()) >= 0) {
     var params = required ? required.params : undefined;
     return isParametersMatching(parameters, params);
   } else {
@@ -60,7 +77,21 @@ function isBodyOrParametersMatching(method, body, parameters, required) {
 function isParametersMatching(parameters, required) {
   if (required === undefined) return true;
 
-  return isEqual(parameters, required);
+  const simplify = param => {
+    if (param) {
+      if (param.append) {
+        return [...param.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+      } else {
+        return Object.entries(param).sort((a, b) => b[0].localeCompare(a[0]));
+      }
+    }
+    return param;
+  };
+
+  const arr1 = simplify(parameters);
+  const arr2 = simplify(required);
+
+  return isEqual(arr1, arr2);
 }
 
 function isBodyMatching(body, requiredBody) {
@@ -70,8 +101,10 @@ function isBodyMatching(body, requiredBody) {
   var parsedBody;
   try {
     parsedBody = JSON.parse(body);
-  } catch (e) { }
-  return parsedBody ? isEqual(parsedBody, requiredBody) : isEqual(body, requiredBody);
+  } catch (e) {}
+  return parsedBody
+    ? isEqual(parsedBody, requiredBody)
+    : isEqual(body, requiredBody);
 }
 
 function purgeIfReplyOnce(mock, handler) {
@@ -94,11 +127,13 @@ function settle(resolve, reject, response, delay) {
   if (response.config && response.config.validateStatus) {
     response.config.validateStatus(response.status)
       ? resolve(response)
-      : reject(createErrorResponse(
-        'Request failed with status code ' + response.status,
-        response.config,
-        response
-      ));
+      : reject(
+          createErrorResponse(
+            'Request failed with status code ' + response.status,
+            response.config,
+            response
+          )
+        );
     return;
   }
 
@@ -121,7 +156,11 @@ function createErrorResponse(message, config, response) {
 }
 
 function isSimpleObject(value) {
-  return value !== null && value !== undefined && value.toString() === '[object Object]';
+  return (
+    value !== null &&
+    value !== undefined &&
+    value.toString() === '[object Object]'
+  );
 }
 
 module.exports = {
